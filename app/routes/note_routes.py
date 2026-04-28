@@ -1,4 +1,5 @@
 from flask import Blueprint, request, render_template, redirect, url_for
+from app.models.note import NoteModel
 
 # 建立名為 note 的 Blueprint，以便將路由與主程式 app.py 分離
 note_bp = Blueprint('note', __name__)
@@ -9,7 +10,8 @@ def index():
     [GET] 首頁列表
     讀取資料庫中所有讀書筆記，並渲染 index.html 顯示。
     """
-    pass
+    notes = NoteModel.get_all()
+    return render_template('index.html', notes=notes, query='')
 
 @note_bp.route('/search')
 def search():
@@ -18,7 +20,11 @@ def search():
     從 Query String 中取得 `q` 參數，如果存在則以模糊查詢過濾書籍清單，
     然後渲染 index.html 將結果顯示給使用者。
     """
-    pass
+    query = request.args.get('q', '').strip()
+    if not query:
+        return redirect(url_for('note.index'))
+    notes = NoteModel.search(query)
+    return render_template('index.html', notes=notes, query=query)
 
 @note_bp.route('/add', methods=['GET', 'POST'])
 def add():
