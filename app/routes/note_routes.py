@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect, url_for
+from flask import Blueprint, request, render_template, redirect, url_for, flash
 from app.models.note import NoteModel
 
 # 建立名為 note 的 Blueprint，以便將路由與主程式 app.py 分離
@@ -32,7 +32,21 @@ def add():
     [GET] 渲染新增筆記表單 (add.html)。
     [POST] 接收表單資料 (title, content, rating)，寫入資料庫後重導至首頁 (/)。
     """
-    pass
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+        rating_str = request.form.get('rating', '0')
+        rating = int(rating_str) if rating_str.isdigit() else 0
+        
+        if not title:
+            flash("請填寫書名！", "warning")
+            return render_template('add.html', title_val=title, content_val=content, rating_val=rating)
+            
+        NoteModel.create(title, content, rating)
+        flash("筆記新增成功！")
+        return redirect(url_for('note.index'))
+        
+    return render_template('add.html')
 
 @note_bp.route('/edit/<int:note_id>', methods=['GET', 'POST'])
 def edit(note_id):
@@ -40,7 +54,26 @@ def edit(note_id):
     [GET] 依據 note_id 取出特定筆記，渲染 edit.html 準備進行編輯。如果無此筆記則回報 404。
     [POST] 接收要更新的表單資料，寫入資料庫後重導至首頁 (/)。
     """
-    pass
+    note = NoteModel.get_by_id(note_id)
+    if not note:
+        flash("找不到該筆記", "danger")
+        return redirect(url_for('note.index'))
+        
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+        rating_str = request.form.get('rating', '0')
+        rating = int(rating_str) if rating_str.isdigit() else 0
+        
+        if not title:
+            flash("請填寫書名！", "warning")
+            return render_template('edit.html', note=note)
+            
+        NoteModel.update(note_id, title, content, rating)
+        flash("筆記更新成功！", "success")
+        return redirect(url_for('note.index'))
+
+    return render_template('edit.html', note=note)
 
 @note_bp.route('/delete/<int:note_id>', methods=['POST'])
 def delete(note_id):
@@ -48,4 +81,6 @@ def delete(note_id):
     [POST] 安全性考量，刪除使用 POST 方法。
     依據 note_id 執行特定筆記的刪除操作後，重導至首頁 (/)。
     """
-    pass
+    NoteModel.delete(note_id)
+    flash("筆記已刪除", "success")
+    return redirect(url_for('note.index'))
